@@ -1,0 +1,2 @@
+# SampSamp
+Data acquisition software
