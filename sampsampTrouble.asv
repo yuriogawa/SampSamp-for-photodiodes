@@ -1,0 +1,499 @@
+function varargout = sampsampTest(varargin)
+% SAMPSAMPTEST M-file for sampsampTest.fig
+%      SAMPSAMPTEST, by itself, creates a new SAMPSAMPTEST or raises the existing
+%      singleton*.
+%
+%      H = SAMPSAMPTEST returns the handle to a new SAMPSAMPTEST or the handle to
+%      the existing singleton*.
+%
+%      SAMPSAMPTEST('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in SAMPSAMPTEST.M with the given input arguments.
+%
+%      SAMPSAMPTEST('Property','Value',...) creates a new SAMPSAMPTEST or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before sampsampTest_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to sampsampTest_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+% Edit the above text to modify the response to help sampsampTest
+
+% Last Modified by GUIDE v2.5 19-May-2011 14:20:29
+
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @sampsampTest_OpeningFcn, ...
+                   'gui_OutputFcn',  @sampsampTest_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+%-------to get figute in to rätt plats------------
+try
+h = getappdata(0,'hand');
+set(h,'position',[197.5 3.7 57.8 55.6154])
+end
+% End initialization code - DO NOT EDIT
+
+
+% --- Executes just before sampsampTest is made visible.
+function sampsampTest_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to sampsampTest (see VARARGIN)
+
+% Choose default command line output for sampsampTest
+handles.output = hObject;
+
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes sampsampTest wait for user response (see UIRESUME)
+
+%--------for positioning the figure---------------
+    h=gcf;
+    setappdata(0,'hand',h)
+
+% --- Outputs from this function are returned to the command line.
+function varargout = sampsampTest_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get default command line output from handles structure
+varargout{1} = handles.output;
+
+
+% --- Executes on button press in pushbutton3.
+function pushbutton3_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+daqreset
+try
+    On = get(handles.on,'Value');
+%     plotOff = get(handles.Off,'Value');
+catch 
+    plotOn=1;
+    plotOff=2;
+end
+freq = get(handles.freq,'String');
+% try catch!?
+freq=str2num(freq);
+
+sec = get(handles.sec,'String');
+sec=str2num(sec);
+
+samples = freq;
+sampPerTrig=sec*freq;
+fig1 = figure;
+
+set(fig1,'Position',[688,315,700,350]);
+
+%-----------Create ai-----------------
+ai=analoginput('nidaq','Dev1');
+%-------------Seting ai upp--------------
+
+a0 = get(handles.a0,'Value');
+a1 = get(handles.a1,'Value');
+a2 = get(handles.a2,'Value');
+a3 = get(handles.a3,'value');
+a4 = get(handles.a4,'Value');
+a5 = get(handles.a5,'value');
+a6 = get(handles.a6,'Value');
+a7 = get(handles.a7,'Value');
+
+channel=[]
+for i=0:7
+        if eval(sprintf('a%d',i))==1
+            channel(end + 1)= i
+        end
+end
+ch = addchannel(ai,channel);
+
+set(ai,'SampleRate',samples);
+set(ai,'SamplesPerTrigger',sampPerTrig);
+
+if plotOn
+    set(ai,'TimerPeriod',0.01);
+    set(ai,'TimerFcn',@realTimeTestPlot_Callback);
+end
+
+start(ai)
+
+[data,time,abstime] = getdata(ai);
+setappdata(0,'data',data);
+setappdata(0,'time',time);
+setappdata(0,'abTime',abstime)
+setappdata(0,'samples', sampPerTrig);
+setappdata(0,'ports', channel);    
+setappdata(0,'sec',sec);
+hej = get(ai,'InitialTriggerTime');
+setappdata(0,'hej',hej);
+% --- Executes on button press in plot.
+
+
+function plot_Callback(hObject, eventdata, handles)
+% hObject    handle to plot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = getappdata(0,'data');
+abstime = getappdata(0,'abTime');
+N = length(data);
+ch = getappdata(0,'ports');
+sec = getappdata(0,'sec');
+flera=get(handles.en,'value');
+
+x=linspace(0,sec,N);
+x=x + abstime(5);
+
+a0 = get(handles.a0p,'Value');
+a1 = get(handles.a1p,'Value');
+a2 = get(handles.a2p,'Value');
+a3 = get(handles.a3p,'Value');
+a4 = get(handles.a4p,'Value');
+a5 = get(handles.a5p,'Value');
+a6 = get(handles.a6p,'Value');
+a7 = get(handles.a7p,'Value');
+
+if flera==1
+    plotCh=[];
+    for i=0:7
+
+        if eval(sprintf('a%d',i))==1
+           plotCh(end + 1)=i
+        end
+    end
+    ch
+    member = ismember(ch,plotCh)
+    f=[];
+    for i=1:length(member)
+        if member(i)==1
+            f(end +1) = figure;
+            plot(x,data(:,i))
+        end
+    end
+else 
+    
+    figure
+    plot(x,data);
+    
+end
+
+% --- Executes on button press in a7p.
+function a7p_Callback(hObject, eventdata, handles)
+% hObject    handle to a7p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a7p
+
+
+% --- Executes on button press in a6p.
+function a6p_Callback(hObject, eventdata, handles)
+% hObject    handle to a6p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a6p
+
+
+% --- Executes on button press in a5p.
+function a5p_Callback(hObject, eventdata, handles)
+% hObject    handle to a5p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a5p
+
+
+% --- Executes on button press in a4p.
+function a4p_Callback(hObject, eventdata, handles)
+% hObject    handle to a4p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a4p
+
+
+% --- Executes on button press in a3p.
+function a3p_Callback(hObject, eventdata, handles)
+% hObject    handle to a3p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a3p
+
+
+% --- Executes on button press in a2p.
+function a2p_Callback(hObject, eventdata, handles)
+% hObject    handle to a2p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a2p
+
+
+% --- Executes on button press in a1p.
+function a1p_Callback(hObject, eventdata, handles)
+% hObject    handle to a1p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a1p
+
+
+% --- Executes on button press in a0p.
+function a0p_Callback(hObject, eventdata, handles)
+% hObject    handle to a0p (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a0p
+
+
+% --- Executes on button press in home.
+function home_Callback(hObject, eventdata, handles)
+% hObject    handle to home (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+home
+
+% --- Executes on button press in reset.
+function reset_Callback(hObject, eventdata, handles)
+% hObject    handle to reset (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+daqreset;
+clear(ai);
+
+
+function freq_Callback(hObject, eventdata, handles)
+% hObject    handle to freq (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of freq as text
+%        str2double(get(hObject,'String')) returns contents of freq as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function freq_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to freq (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function sec_Callback(hObject, eventdata, handles)
+% hObject    handle to sec (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of sec as text
+%        str2double(get(hObject,'String')) returns contents of sec as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function sec_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to sec (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in plotAllInOne.
+function plotAllInOne_Callback(hObject, eventdata, handles)
+% hObject    handle to plotAllInOne (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of plotAllInOne
+
+
+% --- Executes on button press in plotIndividually.
+function plotIndividually_Callback(hObject, eventdata, handles)
+% hObject    handle to plotIndividually (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of plotIndividually
+
+
+% --- Executes on button press in a1.
+function a1_Callback(hObject, eventdata, handles)
+% hObject    handle to a1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a1
+
+
+% --- Executes on button press in a2.
+function a2_Callback(hObject, eventdata, handles)
+% hObject    handle to a2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a2
+
+
+% --- Executes on button press in a3.
+function a3_Callback(hObject, eventdata, handles)
+% hObject    handle to a3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a3
+
+
+% --- Executes on button press in a4.
+function a4_Callback(hObject, eventdata, handles)
+% hObject    handle to a4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a4
+
+
+% --- Executes on button press in a5.
+function a5_Callback(hObject, eventdata, handles)
+% hObject    handle to a5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a5
+
+
+% --- Executes on button press in a6.
+function a6_Callback(hObject, eventdata, handles)
+% hObject    handle to a6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a6
+
+
+% --- Executes on button press in a7.
+function a7_Callback(hObject, eventdata, handles)
+% hObject    handle to a7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a7
+
+
+% --- Executes on button press in a0.
+function a0_Callback(hObject, eventdata, handles)
+% hObject    handle to a0 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of a0
+
+
+
+function realTimeTestPlot_Callback(hObject, eventdata, handles)
+% hObject    handle to daqrealtimeplot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% function daqrealtimeplot(hObject,eventdata)
+size = hObject.SamplesAvailable;
+
+if hObject.SamplesAcquired>0
+    data=peekdata(hObject,size);
+    plot(data);
+    drawnow;
+end 
+
+
+% --- Executes on button press in off.
+function off_Callback(hObject, eventdata, handles)
+% hObject    handle to off (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+off = get(handles.off,'Value');
+if off
+    set(handles.uipanel16,'visible', 'off');
+    set(handles.on,'Value',0);
+else
+    set(handles.uipanel16,'visible', 'on');
+    set(handles.on,'Value',1);
+    
+end
+
+% Hint: get(hObject,'Value') returns toggle state of off
+
+
+% --- Executes on button press in en.
+function en_Callback(hObject, eventdata, handles)
+% hObject    handle to en (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of en
+a = get(handles.en,'value');
+if a
+    set(handles.flera,'value',0);
+else
+    set(handles.flera,'value',1);
+end
+
+
+% --- Executes on button press in flera.
+function flera_Callback(hObject, eventdata, handles)
+% hObject    handle to flera (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of flera
+a = get(handles.flera,'value');
+if a
+    set(handles.en,'value',0);
+else
+    set(handles.en,'value',1);
+end
+
+
+% --- Executes on button press in on.
+function on_Callback(hObject, eventdata, handles)
+% hObject    handle to on (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of on
+a=get(handles.on,'value');
+if a
+    set(handles.uipanel16,'visible','on');
+    set(handles.off,'value',0);
+else
+    set(handles.uipanel16,'visible','off');
+    set(handles.off,'value',1);
+end
