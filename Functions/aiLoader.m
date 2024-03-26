@@ -1,14 +1,14 @@
 function [handles, samHandles, ai] = aiLoader(handles, samHandles,  ai, useTrigg)
 
 %-------------Adds channals to ai from analogInputPanel-----------------
-a0 = 1;%get(handles.a0,'value');
-a1 = get(handles.a1,'value');    %defoult
-a2 = get(handles.a2,'value');
-a3 = get(handles.a3,'value');
-a4 = get(handles.a4,'value');
-a5 = get(handles.a5,'value');
-a6 = get(handles.a6,'value');
-a7 = get(handles.a7,'value');
+a(1) = 1;% Respresents get(handles.a0,'value'); as a0 is static
+a(2) = get(handles.a1,'value'); 
+a(3) = get(handles.a2,'value');
+a(4) = get(handles.a3,'value');
+a(5) = get(handles.a4,'value');
+a(6) = get(handles.a5,'value');
+a(7) = get(handles.a6,'value');
+a(8) = get(handles.a7,'value');
 
 % When you add channels you need the number of the
 % port to sample from to activate it, under this a vector is created
@@ -16,10 +16,9 @@ a7 = get(handles.a7,'value');
 
 y = zeros(1, 8);
 
-% Review for speed
 for i=0:7
-    if eval(sprintf('a%d',i))==1
-        y(i)=i;
+    if a(i+1) == 1
+        y(i+1)=i;
     end
 end
 

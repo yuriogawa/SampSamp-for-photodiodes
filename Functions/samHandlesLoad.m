@@ -1,5 +1,5 @@
-%loads all the kostum konstants
-function samHandles=samHandlesLoade()
+% Loads all custom settings
+function samHandles=samHandlesLoad()
 
 %for som sort of loading of saved setings try somethings like
 %if exists(savedsetings)
