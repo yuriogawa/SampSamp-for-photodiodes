@@ -1,4 +1,4 @@
-function [handles,samHandles, ai]=aiLoader(handles,samHandles,ai)
+function [handles, samHandles, ai] = aiLoader(handles, samHandles,  ai, useTrigg)
 
 
 
@@ -8,19 +8,19 @@ function [handles,samHandles, ai]=aiLoader(handles,samHandles,ai)
 
 
     %-------------Adds channals to ai from analogInputPanel-----------------
-    a0=1;%get(handles.a0,'value');
-    a1=get(handles.a1,'value');    %defoult
-    a2=get(handles.a2,'value');
-    a3=get(handles.a3,'value');
-    a4=get(handles.a4,'value');
-    a5=get(handles.a5,'value');
-    a6=get(handles.a6,'value');
-    a7=get(handles.a7,'value');
+    a0 = 1;%get(handles.a0,'value');
+    a1 = get(handles.a1,'value');    %defoult
+    a2 = get(handles.a2,'value');
+    a3 = get(handles.a3,'value');
+    a4 = get(handles.a4,'value');
+    a5 = get(handles.a5,'value');
+    a6 = get(handles.a6,'value');
+    a7 = get(handles.a7,'value');
     
     %%**----------------when you add channels you need the number of the
     %port to sample from to activate it, under this a vector is created
     %which elements represent 
-       y=[];
+    y=[];
     for i=0:7
 
         if eval(sprintf('a%d',i))==1
@@ -35,27 +35,29 @@ function [handles,samHandles, ai]=aiLoader(handles,samHandles,ai)
     %-------------------Specific properties for trigger------------------------
 if get(handles.trigOrNot,'Value')== 1
     
+    if useTrigg == 1
     set (ai,'TriggerType','Software'); %Start trigger is set on software trigger
     set(ai,'TriggerConditionValue',samHandles.triggVal);%unit[V] The TriggerConditionValue 
                                                     %is the criteria for
                                                     %when thrigger signal invoces 
                                                     %the trigger.
+    end
 
     set(ai,'TriggerChannel',ch(1)); %directs the software trigger to the channel 
                                 %that are supose to act as a trigger signal
                                 
                                 
-
-    set(ai,'TriggerDelay',-samHandles.delaySamples);%specifies the amount of data 
-                                                %that is to be saved pre trigger
-                                                %in time unit [s] 
+    if useTrigg == 1
+        set(ai,'TriggerDelay',-samHandles.delaySamples);%specifies the amount of data 
+                                                    %that is to be saved pre trigger
+                                                    %in time unit [s] 
+    end
 else
 
     set(handles.freq,'String','40000')
     set(handles.sec,'String','1800')
     samHandles.triggerBoolean = 0;
  
-  
 end  
 
 
@@ -76,8 +78,9 @@ end
                                             %self off
    
                                               
-                                                 
-set(ai,'TimerPeriod',0.1);%stets the intervalls at which daqrealtimeplot_Callback
+if useTrigg == 1                                            
+    set(ai,'TimerPeriod',0.1);%stets the intervalls at which daqrealtimeplot_Callback
+end
                            %is to be run
 % set(ai,'TimerFcn',@dRTPC);%funktion to be runn whithin the 
 set(ai,'TimerFcn',@dRTPC)                                             %interwall set by TriggerDelay
