@@ -1,4 +1,4 @@
-function [handles,samHandles]=samphandelsRefresh(handles,samHandles)
+function samHandles=samphandelsRefresh(handles,samHandles)
 
 
     samHandles.nameNull = get(handles.name,'String');
@@ -27,8 +27,6 @@ samHandles.fileNameMat = samHandles.folderName;
 freqString = get(handles.freq,'String');
 samHandles.freq = str2num(freqString);
 
-set(handles.freq,'Style','text');
-disp hej
 delayTimeString = get(handles.delSam,'String');
 samHandles.delaySamples = str2num(delayTimeString)/samHandles.freq;
 
