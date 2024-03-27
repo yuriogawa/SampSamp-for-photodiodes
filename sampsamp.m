@@ -28,4 +28,4 @@ disp(' -SampSamp 2.0- ');
 
 addpath(cd, [cd '/' genpath('Functions')], [cd '/' genpath('Icons')]);
 clearRoot;
-main;
+SampSampGUI;
