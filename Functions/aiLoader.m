@@ -1,7 +1,7 @@
 function [handles, samHandles, ai] = aiLoader(handles, samHandles,  ai, useTrigg)
 
 %-------------Adds channals to ai from analogInputPanel-----------------
-a(1) = 1;% Respresents get(handles.a0,'value'); as a0 is static
+a(1) = 1; % Respresents get(handles.a0,'value'); as a0 is static
 a(2) = get(handles.a1,'value'); 
 a(3) = get(handles.a2,'value');
 a(4) = get(handles.a3,'value');
@@ -46,7 +46,7 @@ end
 timeString = get(handles.sec,'String');
 time = str2double(timeString);
 
-sampPerTrig = samHandles.freq*time;
+sampPerTrig = samHandles.freq * time;
 
 % Sets sample rate of ai will be rounded off to closes possible sampling rate 
 %(sample rate is limite by stepsize 1/250000 and has to be modulus 0 with it..)
