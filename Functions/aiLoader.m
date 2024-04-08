@@ -22,7 +22,7 @@ for i=0:7
     end
 end
 
-ch=addchannel(ai,y);
+% ch=addinput(DAQObject, DAQID, y, "Voltage");
 
 %-------------------Specific properties for trigger------------------------
 

@@ -26,6 +26,5 @@ function sampsamp()
 disp(' ');
 disp(' -SampSamp 2.0- ');
 
-addpath(cd, [cd '/' genpath('Functions')], [cd '/' genpath('Icons')]);
-clearRoot;
+addpath(cd, [cd '/' genpath('Functions')]);
 SampSampGUI;
