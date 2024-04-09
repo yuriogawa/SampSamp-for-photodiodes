@@ -1,4 +1,4 @@
-function [handles, samHandles, ai] = aiLoader(handles, samHandles, ai, daqDevice)
+function [samHandles, ai] = aiLoader(handles, samHandles, ai, daqDevice)
 
 % Inputs to this function:
 %
@@ -20,14 +20,12 @@ end
 %-------------------Specific properties for trigger------------------------
 
 if get(handles.trigOrNot,'Value')== 1    
-    if useTrigg == 1
         % Start trigger is set on software trigger
         set (daqDevice,'TriggerType','Software'); 
         % unit[V] The TriggerConditionValue is the criteria for when thrigger signal invokes the trigger.
         set (daqDevice,'TriggerConditionValue',samHandles.triggVal);
         % Specifies the amount of data that is to be saved pre trigger in time unit [s] 
         set (daqDevice,'TriggerDelay',-samHandles.delaySamples);
-    end
     % Directs the software trigger to the channel that are supose to act as a trigger signal
     set (ai,'TriggerChannel',ch(1)); 
 else
