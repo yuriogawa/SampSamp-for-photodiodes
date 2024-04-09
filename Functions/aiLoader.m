@@ -1,10 +1,15 @@
-function [samHandles, ai] = aiLoader(handles, samHandles, ai, daqDevice)
+function [daqDevice] = aiLoader(app)
 
 % Inputs to this function:
-%
+% app = contains handles to all SampSamp properties
 % daqDevice = Handle to the DAQ object, allowing us to change our recording
 % settings
 % ai = Array corresponding to analogue inputs 0-7 and which to turn on
+
+% Obtain variables from app properties
+ai = app.analogueInputChoice;
+daqDevice = app.daqDevice;
+
 
 % When you add channels you need the number of the
 % port to sample from to activate it, under this a vector is created
@@ -19,7 +24,7 @@ end
 
 %-------------------Specific properties for trigger------------------------
 
-if get(handles.trigOrNot,'Value')== 1    
+if app.trigOrNot.Value == 1    
         % Start trigger is set on software trigger
         set (daqDevice,'TriggerType','Software'); 
         % unit[V] The TriggerConditionValue is the criteria for when thrigger signal invokes the trigger.
@@ -29,12 +34,12 @@ if get(handles.trigOrNot,'Value')== 1
     % Directs the software trigger to the channel that are supose to act as a trigger signal
     set (ai,'TriggerChannel',ch(1)); 
 else
-    set(handles.freq,'String','40000')
-    set(handles.sec,'String','1800')
+    set(app.freq,'String','40000')
+    set(app.sec,'String','1800')
     samHandles.triggerBoolean = 0; 
 end  
 
-timeString = get(handles.sec,'String');
+timeString = get(app.sec,'String');
 time = str2double(timeString);
 
 sampPerTrig = samHandles.freq * time;
