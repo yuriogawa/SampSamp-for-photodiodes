@@ -9,6 +9,10 @@ function [daqDevice] = aiLoader(app)
 % Obtain variables from app properties
 ai = app.analogueInputChoice;
 daqDevice = app.daqDevice;
+useTrig = app.trigOrNot.Value;
+
+sampleFrequency = app.freq.Value;
+timeout = app.sec.Value;
 
 
 % When you add channels you need the number of the
@@ -24,41 +28,34 @@ end
 
 %-------------------Specific properties for trigger------------------------
 
-if app.trigOrNot.Value == 1    
-        % Start trigger is set on software trigger
-        set (daqDevice,'TriggerType','Software'); 
-        % unit[V] The TriggerConditionValue is the criteria for when thrigger signal invokes the trigger.
-        set (daqDevice,'TriggerConditionValue',samHandles.triggVal);
-        % Specifies the amount of data that is to be saved pre trigger in time unit [s] 
-        set (daqDevice,'TriggerDelay',-samHandles.delaySamples);
+if useTrig == 1    
+    % Start trigger is set on software trigger
+    set (daqDevice,'TriggerType','Software'); 
+    % unit[V] The TriggerConditionValue is the criteria for when thrigger signal invokes the trigger.
+    set (daqDevice,'TriggerConditionValue',samHandles.triggVal);
+    % Specifies the amount of data that is to be saved pre trigger in time unit [s] 
+    set (daqDevice,'TriggerDelay',-samHandles.delaySamples);
     % Directs the software trigger to the channel that are supose to act as a trigger signal
-    set (ai,'TriggerChannel',ch(1)); 
-else
-    set(app.freq,'String','40000')
-    set(app.sec,'String','1800')
-    samHandles.triggerBoolean = 0; 
-end  
+    set (daqDevice,'TriggerChannel',ch(1)); 
+end
 
-timeString = get(app.sec,'String');
-time = str2double(timeString);
-
-sampPerTrig = samHandles.freq * time;
+samplesPerTrig = sampleFrequency * timeout;
 
 % Sets sample rate of ai will be rounded off to closes possible sampling rate 
 %(sample rate is limite by stepsize 1/250000 and has to be modulus 0 with it..)
-set (ai,'SampleRate',samHandles.freq);
+set(daqDevice,'SampleRate',sampleFrequency);
 
 % Determens longest possible sampling time before sampsamp considers the start 
 % trigger to be a false one and shots itself off
-set(ai,'SamplesPerTrigger',sampPerTrig);
+set(daqDevice,'SamplesPerTrigger',samplesPerTrig);
 
-if useTrigg == 1        
+if useTrig == 1        
     % Sets the intervalls at which daqrealtimeplot_Callback is to be run
-    set(ai,'TimerPeriod',0.1);
+    set(daqDevice,'TimerPeriod',0.1);
 end
 
 % Function to be run within the interwall set by TriggerDelay
-set(ai,'TimerFcn',@dRTPC)
+set(daqDevice,'TimerFcn',@dRTPC)
 
 % Sets the function that is to be run when data is missed.
-set(ai,'DataMissedFcn',@missedData);
+set(daqDevice,'DataMissedFcn',@missedData);
