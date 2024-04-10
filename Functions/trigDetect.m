@@ -27,3 +27,4 @@ function [trigDetected, trigMoment] = trigDetect(timestamps, data, trigConfig)
                 trigMomentIndex = 1 + find(diff(trigConditionMet)==1, 1, 'first');
                 trigMoment = timestamps(trigMomentIndex);
             end
+            

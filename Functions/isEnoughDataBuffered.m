@@ -5,7 +5,6 @@ function results = isEnoughDataBuffered(timeBuffer, delaySamples)
     % whether enough pre-trigger data is buffered so that a
     % triggered capture can be requested
 
-    % Don't trust this, do alternative - Jaxon
     results = 0;
     if (size(timeBuffer,1) > delaySamples)
         results = 1;
