@@ -9,17 +9,17 @@ function sampsamp()
 %                      | |                         | |    
 %                      |_|                         |_|    
 %|------------------------------------------------------|
-%|   SampSamp 2.0 - Visual Stimulus user interface      |
+%|   SampSamp 2.0 - Trigger-based recording software    |
 %|                                                      |
-%|    -Requires MatLab 2023 with Psychophysics toolbox  |
-%|    -Documentation and user's manual available        |
+%|    -Requires MatLab 2023 with DAQ toolbox            |
+%|    -Requires Windows 10/11 with min. 8Gb of RAM      |
 %|                                                      |
 %|                                                      |
 %| info@flyfly.se             (c) Someone 2009          |
 %|------------------------------------------------------|
 %
-%               Why did the fly fly?
-%            Because the spider spied 'er!
+%               Why did the samp samp?
+%              Because the samp... what '<'
 %
 %
 

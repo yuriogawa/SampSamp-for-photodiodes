@@ -26,7 +26,7 @@ function data = storeDataInFIFO(data, buffersize, datablock)
             shiftPosition = size(datablock,1);
             data = circshift(data,-shiftPosition);
             data(end-shiftPosition+1:end,:) = datablock;
-        elseif (size(data,1) < buffersize) && (size(data,1)+size(datablock,1) > buffersize)
+        elseif any((size(data,1) < buffersize)) && any((size(data,1)+size(datablock,1) > buffersize))
             % Current data size is less than buffer size and appending the new
             % data block results in a size greater than the buffer size.
             data = [data; datablock];
