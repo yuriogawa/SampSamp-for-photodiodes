@@ -10,7 +10,7 @@ function data = storeDataInFIFO(data, buffersize, timeBlock, dataBlock)
 %  datablock is a new data block to be added to the buffer (column vector Kx1).
 %  output data is the updated data buffer (column vector Mx1).
 
-    oldDataSize = length(data, 1);
+    oldDataSize = size(data, 1);
     newDataSize = size(timeBlock, 1);
     % If the data size is greater than the buffer size, keep only the
     % the latest "buffer size" worth of data
