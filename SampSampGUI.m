@@ -22,7 +22,7 @@ function varargout = SampSampGUI(varargin)
 
 % Edit the above text to modify the response to help sampsamp
 
-% Last Modified by GUIDE v2.5 28-Mar-2012 10:49:28
+% Last Modified by GUIDE v2.5 03-Oct-2024 12:58:18
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -117,7 +117,7 @@ handles.startTrigVal = str2double(handles.startTrigValue.Value);
 handles.stopTrigVal  = str2double(handles.stopTrigValue.Value);
 handles.useTrigger   = handles.trigOrNot.Value;
 % Broken
-handles.aboveUnder   = handles.stopTrigger.SelectedObject;
+handles.aboveUnder   = handles.fromAbove.Value;
 
 % Choose default command line output for sampsamp
 handles.output = hObject;
@@ -421,19 +421,19 @@ end
 
 
 % --- Executes on button press in fromAbove.
-function fromAbove_Callback(~, ~, handles)
+function aboveOrUnderTrig(~, ~, handles)
 % hObject    handle to fromAbove (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-value = get(handles.fromAbove,'Value');
-if value
-    set(handles.fromUnder,'Value', false);
-else
-    set (handles.fromUnder,'Value',true);
+val = handles.trigOrNot.Value;
+% This needs to be checked
+handles.useTrigger = val;
+switch val
+    case 1
+        set (handles.fromAbove,'Value',true);
+    case 2
+        set(handles.fromAbove,'Value', false);
 end
-
-% Hint: get(hObject,'Value') returns toggle state of fromAbove
-
 
 % --- Executes on button press in fromUnder.
 function fromUnder_Callback(~, ~, handles)
@@ -476,7 +476,12 @@ switch val
 end
 
 function timeoutSecs_Callback(~, ~, handles)
-    if str2double(handles.timeoutSecs.Value) < 5
+    if str2double(handles.timeoutSecs.String) < 5
         msgbox("Timeout cannot be less than 5 seconds","Warning","warn");
-        handles.timeoutSecs.Value = '5';
+        handles.timeoutSecs.String = '5';
     end
+
+% --- Outputs from this function are returned to the command line.
+function sampsampGUI_OutputFcn(~, ~, ~)
+% Get default command line output from handles structure
+% varargout{1} = handles.output;
