@@ -22,7 +22,7 @@ function varargout = SampSampGUI(varargin)
 
 % Edit the above text to modify the response to help sampsamp
 
-% Last Modified by GUIDE v2.5 03-Oct-2024 12:58:18
+% Last Modified by GUIDE v2.5 03-Oct-2024 15:50:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -50,51 +50,51 @@ function sampsampGUI_OpeningFcn(hObject, ~, handles, ~)
 
 %% Define our figure variables here
 % Information about the connected DAQ device
-handles.daqConnection = "Dev1"; % Refers to what NI device is being used
-handles.daqType = "ni"; % Name of daqDevice
-handles.DAQ = [];% Handle to connected DAQ hardware object
-handles.analogueInputChoice = []; % What is the chosen input source (represents a0 - a7)
+properties.daqConnection = "Dev1"; % Refers to what NI device is being used
+properties.daqType = "ni"; % Name of daqDevice
+properties.DAQ = [];% Handle to connected DAQ hardware object
+properties.analogueInputChoice = []; % What is the chosen input source (represents a0 - a7)
 
 % Options relating to trigger values for DAQ
-handles.useTrigger = true;
-handles.startTrigVal = [];
-handles.stopTrigVal = [];
-handles.TrigActive = [];
-handles.maxCaptureTime = 15; % Determines the largest possible recording time for a single data block
+properties.useTrigger = true;
+properties.startTrigVal = [];
+properties.stopTrigVal = [];
+properties.TrigActive = [];
+properties.maxCaptureTime = 15; % Determines the largest possible recording time for a single data block
 
-handles.trigEnd = []; % Index pointer to the end of a data block
+properties.trigEnd = []; % Index pointer to the end of a data block
 
-handles.aboveUnder = []; % Change to something else, confusing
+properties.aboveUnder = []; % Change to something else, confusing
 
 % State of the DAQ device during data acquisition
-handles.currentState = 'Acquisition.ReadyForCapture';
+properties.currentState = 'Acquisition.ReadyForCapture';
 
 % Path and name to the .mat file representing the current recording
-handles.recordingName = [];
+properties.recordingName = [];
 % Bounderies for the plotwindows
-handles.axisXmin = 0; 
-handles.axisXmax = 11;
-handles.axisYmin = 0;
-handles.axisYmax = 3;  
+properties.axisXmin = 0; 
+properties.axisXmax = 11;
+properties.axisYmin = 0;
+properties.axisYmax = 3;  
 
-handles.countOnOff = 2;      % Counter that makes sure that start button is green when sampling end red when not(that it dosent flicker)        
-handles.subPlot = '1:5:end'; % Plots every 5th sample
+properties.countOnOff = 2;      % Counter that makes sure that start button is green when sampling end red when not(that it dosent flicker)        
+properties.subPlot = '1:5:end'; % Plots every 5th sample
 
 % Define properties regarding saving data
-handles.files = [];                         % List of individual .mat files containing data
-handles.fileNameData = 'data_block';        % Each data block gets a name data_block1,...,data_block20,....
-handles.fileNameTime = 'ticktimes_block';   % To each block of data a corresponding time stamp is saved with the name ticktimes_block1,....tcktimes_block20,....
-handles.dataBlock = 'data_block';           % Each data block gets a name data_block1,...,data_block20,....
-handles.fileCounter = 1;                    % Name counter of data files ex. data_block1, data_block2        
-handles.counter = [];                       % Counts data blocks for long recording sessions
-handles.lastSaveTime = 0;                   % Contains timestamp for last autosave during no trigger
+properties.files = [];                         % List of individual .mat files containing data
+properties.fileNameData = 'data_block';        % Each data block gets a name data_block1,...,data_block20,....
+properties.fileNameTime = 'ticktimes_block';   % To each block of data a corresponding time stamp is saved with the name ticktimes_block1,....tcktimes_block20,....
+properties.dataBlock = 'data_block';           % Each data block gets a name data_block1,...,data_block20,....
+properties.fileCounter = 1;                    % Name counter of data files ex. data_block1, data_block2        
+properties.counter = [];                       % Counts data blocks for long recording sessions
+properties.lastSaveTime = 0;                   % Contains timestamp for last autosave during no trigger
 
-handles.FIFOBuffer = [];
-handles.captureStartMoment = [];            % Index pointing to beginning of data block
-handles.captureEndMoment = [];              % Index to end of data block
+properties.FIFOBuffer = [];
+properties.captureStartMoment = [];            % Index pointing to beginning of data block
+properties.captureEndMoment = [];              % Index to end of data block
 
 % Links to the folder created when saving data
-handles.currentRecordingFolder = [];
+properties.currentRecordingFolder = [];
 
 %% --- Executes just before sampsamp is made visible.
 uiWindow=gcf;
@@ -108,19 +108,21 @@ defaultPath = strsplit(defaultPath, 'SampSampGUI');
 
 handles.saveDir.String = defaultPath{1};
 
-handles.analogueInputChoice = [handles.a0.Value, handles.a1.Value, ...
+properties.analogueInputChoice = [handles.a0.Value, handles.a1.Value, ...
                                handles.a2.Value, handles.a3.Value, ...
                                handles.a4.Value, handles.a5.Value, ...
                                handles.a6.Value, handles.a7.Value];     
 
-handles.startTrigVal = str2double(handles.startTrigValue.Value);
-handles.stopTrigVal  = str2double(handles.stopTrigValue.Value);
-handles.useTrigger   = handles.trigOrNot.Value;
+properties.startTrigVal = str2double(handles.startTrigValue.Value);
+properties.stopTrigVal  = str2double(handles.stopTrigValue.Value);
+properties.useTrigger   = handles.trigOrNot.Value;
 % Broken
-handles.aboveUnder   = handles.fromAbove.Value;
+properties.aboveUnder   = handles.aboveOrUnder.Value;
 
 % Choose default command line output for sampsamp
-handles.output = hObject;
+properties.output = hObject;
+
+setappdata(0, 'properties', properties)
 
 % --- Executes on button press in startDAQ.
 function startDAQ_Callback(~, ~, handles)
@@ -130,35 +132,37 @@ function startDAQ_Callback(~, ~, handles)
 % --- Executes on button press in startDAQ.
 daqreset;
 
+properties = getappdata(0, 'properties');
+
 % Reset FIFO buffer data
-handles.FIFOBuffer = [];
+properties.FIFOBuffer = [];
 
 % Reset Data and Timestamps
-handles.lastSaveTime = 0;
+properties.lastSaveTime = 0;
 
 recordStart = string (datetime("now"));
 recordStart = strrep(recordStart, ":", "_");
-newFolder = append (string(handles.saveDir.Text), "\", recordStart);
-handles.currentRecordingFolder = newFolder;
+newFolder = append(string(handles.saveDir.String), "\", recordStart);
+properties.currentRecordingFolder = newFolder;
 mkdir(newFolder);
 
-handles.recordingName = append(newFolder, '\', recordStart, '.mat');
+properties.recordingName = append(newFolder, '\', recordStart, '.mat');
 
 info = '---------Data from sampsamp--------------';
-save(handles.recordingName,'info');
+save(properties.recordingName,'info');
 
 % Reset files variable
-handles.files={''};
+properties.files={''};
 
 % Function to load selected channels and apply daq settings to a new daq object 
-configureDAQ(handles);
+properties = configureDAQ(handles, properties);
 
 % Set counter for datablock
-handles.counter = 1;
+properties.counter = 1;
 
 % Start DAQ device, quit if errors occcur
 try
-    start(handles.DAQ,'continuous');
+    start(properties.DAQ,'continuous');
     tic
 catch error
     disp('error starting DAQ device');
@@ -166,20 +170,22 @@ catch error
     return
 end
 
-handles.currentState = 'Acquisition.Buffering';
-handles.startDAQ.FontColor = 'green';
+properties.currentState = 'Acquisition.Buffering';
+handles.startDAQ.ForegroundColor = 'green';
 
-if handles.useTrigger == 0
+if properties.useTrigger == 0
     % Need to find replacement in modern DAQ toolbox, there was
     % code here to be able to istantly 'getdata' and save the
     % data, time, and 'abstime'
 end
+setappdata(0, 'properties', properties)
 
-function scansAvailable_Callback(~, ~, handles)
+function scansAvailable_Callback(handles, src, ~)
 % scansAvailable_Callback Executes on DAQ ScansAvailable event
 % This callback function gets executed periodically as more data is acquired by the daqDevice.
 % This callback is setup in the script 'configureDAQ.m' 
     tic
+    properties = getappdata(0, 'properties');
     
     % Continuous acquisition data and timestamps are stored in FIFO data buffers
     % Calculate required buffer size -- this should be large enough to accomodate the
@@ -188,104 +194,108 @@ function scansAvailable_Callback(~, ~, handles)
     
     [data,timestamps] = read(src, src.ScansAvailableFcnCount, 'OutputFormat','Matrix');
     
-    bufferSize = str2double(handles.timeoutSecs.Value) * str2double(handles.sampleFrequency.Value);
+    bufferSize = str2double(handles.timeoutSecs.String) * str2double(handles.sampleFrequency.String);
 
     % FIFO Buffer setup:
     % (1) is timestamps
     % (2) is trigger data
     % (3) is participant data
-    handles.FIFOBuffer = storeDataInFIFO(handles.FIFOBuffer, bufferSize, timestamps, data);
+    properties.FIFOBuffer = storeDataInFIFO(properties.FIFOBuffer, bufferSize, timestamps, data);
     % App state control logic 
-    switch handles.currentState
+    switch properties.currentState
         case 'Acquisition.Buffering'
             % Buffering pre-trigger data, this points to a script
             % in the 'Functions' folder
-            if isEnoughDataBuffered(handles.FIFOBuffer(:, 1), handles.delaySamples.Value)
+            disp('buffering!')
+            if isEnoughDataBuffered(properties.FIFOBuffer(:, 1), str2double(handles.delaySamples.String))
                 % Depending if user wants to employ a software
                 % trigger or not, change state
-                handles.currentState = 'Capture.CapturingData';
-                if handles.useTrigger
-                    handles.currentState = 'Capture.LookingForTrigger';
+                properties.currentState = 'Capture.CapturingData';
+                if properties.useTrigger
+                    properties.currentState = 'Capture.LookingForTrigger';
                 else
-                    handles.captureStartMoment = handles.lastSaveTime;
-                    handles.currentState = 'Capture.CapturingData';
+                    properties.captureStartMoment = properties.lastSaveTime;
+                    properties.currentState = 'Capture.CapturingData';
                 end
             end
         case 'Capture.LookingForTrigger'
+            disp('Looking for a trigger!')
             % Looking for trigger event in the latest data
-            trigActive = detectStartTrigger(handles);
+            [trigActive, properties] = detectStartTrigger(handles, properties);
             if trigActive
-                handles.currentState = 'Capture.CapturingData';
+                properties.currentState = 'Capture.CapturingData';
             end
         case 'Capture.CapturingData'
+            disp('capturing!')
             % Get index for where data block starts
-            dataBlockStartIndex = find(handles.FIFOBuffer(:, 1) >= handles.captureStartMoment, 1, 'first');
-            dataBlockLength = size(handles.FIFOBuffer, 1) - dataBlockStartIndex;
+            dataBlockStartIndex = find(properties.FIFOBuffer(:, 1) >= properties.captureStartMoment, 1, 'first');
+            dataBlockLength = size(properties.FIFOBuffer, 1) - dataBlockStartIndex;
             % Only show available data, up to the maximum window, and only show data from the current data block
-            samplesToPlot = min([round(str2double(handles.viewWindowLength.Value) * src.Rate), size(handles.FIFOBuffer,1), dataBlockLength]);
-            firstPoint = size(handles.FIFOBuffer, 1) - samplesToPlot + 1;
+            samplesToPlot = min([round(str2double(handles.viewWindowLength.String) * src.Rate), size(properties.FIFOBuffer,1), dataBlockLength]);
+            firstPoint = size(properties.FIFOBuffer, 1) - samplesToPlot + 1;
 
             % Plot the trigger data if the user has selected the relevant checkbox
             if handles.showTrigger.Value
-                plot(handles.triggerPlot, handles.FIFOBuffer(firstPoint:end, 1), ...
-                     handles.FIFOBuffer(firstPoint:end, 2));
+                plot(handles.triggerPlot, properties.FIFOBuffer(firstPoint:end, 1), ...
+                     properties.FIFOBuffer(firstPoint:end, 2));
             end
             % Always plot the recorded data when collecting data 
-            plot(handles.dataPlot, handles.FIFOBuffer(firstPoint:end, 1), ...
-                 handles.FIFOBuffer(firstPoint:end, 3));
+            plot(handles.dataPlot, properties.FIFOBuffer(firstPoint:end, 1), ...
+                 properties.FIFOBuffer(firstPoint:end, 3));
 
             % Wrap axis limits around the data
-            handles.triggerPlot.XLim = [handles.FIFOBuffer(firstPoint, 1), handles.FIFOBuffer(end, 1)];
-            handles.dataPlot.XLim = [handles.FIFOBuffer(firstPoint, 1), handles.FIFOBuffer(end, 1)];
+            handles.triggerPlot.XLim = [properties.FIFOBuffer(firstPoint, 1), properties.FIFOBuffer(end, 1)];
+            handles.dataPlot.XLim = [properties.FIFOBuffer(firstPoint, 1), properties.FIFOBuffer(end, 1)];
             drawnow
             % First case: when triggers are used, check to save
             % data by either a timeout 
-            if handles.trigOrNot == 1
-                timeoutResult = str2double((handles.FIFOBuffer(end,1)-handles.captureStartMoment)) > str2double(handles.timeoutSecs.Value);
-                endTriggerResult = detectEndTrigger(handles);
+            if properties.useTrigger
+                timeoutResult = str2double((properties.FIFOBuffer(end,1)-properties.captureStartMoment)) > str2double(handles.timeoutSecs.Value);
+                [endTriggerResult, properties] = detectEndTrigger(handles, properties);
                 if any(timeoutResult) || any(endTriggerResult)
                     completeCapture(handles)
                 end
             % Second case: no trigger is used, save the current
             % data as it is being recorded to prevent dropped data
             else
-                timeoutResult = handles.FIFOBuffer(end,1) - handles.lastSaveTime > str2double(handles.timeoutSecs.Value) - 1;
+                timeoutResult = properties.FIFOBuffer(end,1) - properties.lastSaveTime > str2double(handles.timeoutSecs.Value) - 1;
                 if any(timeoutResult)
                     completeCapture_noTrigg(handles)
                 end
             end
     end
     toc
+    setappdata(0, 'properties', properties);
 
-function trigActive = detectStartTrigger(~, ~, handles)
+function [trigActive, properties] = detectStartTrigger(handles, properties)
 %detectTrigger Detects trigger condition and updates relevant app properties
 % Updates TrigActive, TrigMoment, and CaptureStartMoment app properties
-    freq       = str2double(handles.sampleFrequency.Value);
-    updateFreq = str2double(handles.updateFrequency.Value);
+    freq       = str2double(handles.sampleFrequency.String);
+    updateFreq = str2double(handles.updateFrequency.String);
     scansAvailable = freq * (updateFreq / 1000);
     % Get index to check only new data for trigger
-    index = size(handles.FIFOBuffer, 1) - scansAvailable + 1;
+    index = size(properties.FIFOBuffer, 1) - scansAvailable + 1;
     
     trigConfig.Channel = 1; % Represents photo-diode channel
-    trigConfig.Level = handles.startTrigValue.Value;
+    trigConfig.Level = str2double(handles.startTrigValue.String);
     trigConfig.Condition = 'Rising';
-    [trigActive, handles.captureStartMoment] = ...
-        trigDetect(handles.FIFOBuffer(index: end, 1), handles.FIFOBuffer(index: end, 2), trigConfig);
+    [trigActive, properties.captureStartMoment] = ...
+        trigDetect(properties.FIFOBuffer(index: end, 1), properties.FIFOBuffer(index: end, 2), trigConfig);
 
-function result = detectEndTrigger(~, ~, handles)
+function [result, properties] = detectEndTrigger(handles, properties)
 % detectTrigger Detects trigger condition and updates relevant app properties
 % Updates TrigActive, TrigMoment, and CaptureStartMoment app properties
-    freq            = str2double(handles.sampleFrequency.Value);
-    updateFreq      = str2double(handles.updateFrequency.Value);
+    freq            = str2double(handles.sampleFrequency.String);
+    updateFreq      = str2double(handles.updateFrequency.String);
     scansAvailable = freq * (updateFreq / 1000);
     % Get index to check only new data for trigger
-    index = size(handles.FIFOBuffer, 1) - scansAvailable + 1;
+    index = size(properties.FIFOBuffer, 1) - scansAvailable + 1;
     
     trigConfig.Channel = 1; % Represents Stabby-stab channel
-    trigConfig.Level = handles.stopTrigValue.Value;
+    trigConfig.Level = handles.stopTrigValue.String;
     trigConfig.Condition = 'Falling';
-    [result, handles.captureEndMoment] = ...
-        trigDetect(handles.FIFOBuffer(index: end, 1), handles.FIFOBuffer(index: end, 2), trigConfig);
+    [result, properties.captureEndMoment] = ...
+        trigDetect(properties.FIFOBuffer(index: end, 1), properties.FIFOBuffer(index: end, 2), trigConfig);
 
 function completeCapture(~, ~, handles)
 % completeCapture Saves captured data to user folder and resets DAQ
@@ -365,12 +375,12 @@ function completeCapture_noTrigg(~, ~, handles)
     handles.counter = handles.counter + 1;
     %--------------------------------- 
 
-function configureDAQ(handles)
+function properties = configureDAQ(handles, properties)
     % Obtain variables from app properties
-    ai              = handles.analogueInputChoice;
-    d               = daq(handles.daqType);
-    freq            = str2double(handles.sampleFrequency.Value);
-    updateFreq      = str2double(handles.updateFrequency.Value);
+    ai              = properties.analogueInputChoice;
+    d               = daq(properties.daqType);
+    freq            = str2double(handles.sampleFrequency.String);
+    updateFreq      = str2double(handles.updateFrequency.String);
     
     % When you add channels you need the number of the
     % port to sample from to activate it, under this a vector is created
@@ -379,7 +389,7 @@ function configureDAQ(handles)
     for i=0:7
         if ai(i+1) == 1
             % If selected, add a channel to be recorded to DAQ object
-            addinput(d, handles.daqConnection, i, "Voltage");
+            addinput(d, properties.daqConnection, i, "Voltage");
         end
     end
     
@@ -393,21 +403,24 @@ function configureDAQ(handles)
     %(sample rate is limite by stepsize 1/250000 and has to be modulus 0 with it..)
     d.Rate = freq;
     
-    handles.DAQ = d;
+    properties.DAQ = d;
 
 % --- Executes on button press in reset.
 function stopDAQ_Callback(~, ~, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % --- Executes on button press in reset.
 
-if ~isempty(handles.DAQ)
-    stop(handles.DAQ);
+properties = getappdata(0, 'properties');
+
+if ~isempty(properties.DAQ)
+    stop(properties.DAQ);
 end
 if handles.trigOrNot.Value == 0
     completeCapture_noTrigg(handles);
 end
-handles.startDAQ.FontColor = 'red';
-handles.currentState = 'Acquisition.ReadyForCapture';
+handles.startDAQ.ForegroundColor = 'red';
+properties.currentState = 'Acquisition.ReadyForCapture';
+setappdata(0, 'properties', properties)
 
 % --- Executes on button press in openFolder.
 function openFolder_Callback(~, ~, handles)
@@ -425,15 +438,15 @@ function aboveOrUnderTrig(~, ~, handles)
 % hObject    handle to fromAbove (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+properties = getappdata(0, 'properties');
 val = handles.trigOrNot.Value;
-% This needs to be checked
-handles.useTrigger = val;
 switch val
     case 1
-        set (handles.fromAbove,'Value',true);
+        properties.useTrigger = true;
     case 2
-        set(handles.fromAbove,'Value', false);
+        properties.useTrigger = false;
 end
+setappdata(0, 'properties', properties)
 
 % --- Executes on button press in fromUnder.
 function fromUnder_Callback(~, ~, handles)
@@ -449,13 +462,11 @@ end
 
 % --- Executes on selection change in trigOrNot.
 function trigOrNot_Callback(~, ~, handles)
-% hObject    handle to trigOrNot (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+properties = getappdata(0, 'properties');
 val = handles.trigOrNot.Value;
 % This needs to be checked
-handles.useTrigger = val;
+
 switch val
     case 1
         % Enable trigger options
@@ -465,7 +476,8 @@ switch val
         handles.triggerUnit_2.Enable = 'On';
         handles.stopTrigger.Enable = 'On';
         handles.stopTrigValue.Enable = 'On';
-    case 0
+        properties.useTrigger = true;
+    case 2
         % Disable trigger options
         handles.startTrigger.Enable = 'Off';
         handles.startTrigValue.Enable = 'Off';
@@ -473,7 +485,9 @@ switch val
         handles.triggerUnit_2.Enable = 'Off';
         handles.stopTrigger.Enable = 'Off';
         handles.stopTrigValue.Enable = 'Off';
+        properties.useTrigger = false;
 end
+setappdata(0, 'properties', properties)
 
 function timeoutSecs_Callback(~, ~, handles)
     if str2double(handles.timeoutSecs.String) < 5
@@ -485,3 +499,12 @@ function timeoutSecs_Callback(~, ~, handles)
 function sampsampGUI_OutputFcn(~, ~, ~)
 % Get default command line output from handles structure
 % varargout{1} = handles.output;
+
+
+% --- Executes on button press in showTrigger.
+function showTrigger_Callback(hObject, eventdata, handles)
+% hObject    handle to showTrigger (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of showTrigger
