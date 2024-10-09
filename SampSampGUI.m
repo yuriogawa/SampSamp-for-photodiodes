@@ -89,7 +89,9 @@ properties.fileCounter = 1;                    % Name counter of data files ex. 
 properties.counter = [];                       % Counts data blocks for long recording sessions
 properties.lastSaveTime = 0;                   % Contains timestamp for last autosave during no trigger
 
-properties.FIFOBuffer = [];
+% FIFO Buffer gets large, so set as a global variable to reduce load times
+global FIFOBuffer %#ok<*GVMIS> 
+FIFOBuffer = [];
 properties.captureStartMoment = [];            % Index pointing to beginning of data block
 properties.captureEndMoment = [];              % Index to end of data block
 
@@ -135,7 +137,8 @@ daqreset;
 properties = getappdata(0, 'properties');
 
 % Reset FIFO buffer data
-properties.FIFOBuffer = [];
+global FIFOBuffer
+FIFOBuffer = [];
 
 % Reset Data and Timestamps
 properties.lastSaveTime = 0;
@@ -184,6 +187,7 @@ function scansAvailable_Callback(handles, src, ~)
 % scansAvailable_Callback Executes on DAQ ScansAvailable event
 % This callback function gets executed periodically as more data is acquired by the daqDevice.
 % This callback is setup in the script 'configureDAQ.m' 
+    global FIFOBuffer
     tic
     properties = getappdata(0, 'properties');
     
@@ -200,13 +204,13 @@ function scansAvailable_Callback(handles, src, ~)
     % (1) is timestamps
     % (2) is trigger data
     % (3) is participant data
-    properties.FIFOBuffer = storeDataInFIFO(properties.FIFOBuffer, bufferSize, timestamps, data);
+    FIFOBuffer = storeDataInFIFO(FIFOBuffer, bufferSize, timestamps, data);
     % App state control logic 
     switch properties.currentState
         case 'Acquisition.Buffering'
             % Buffering pre-trigger data, this points to a script
             % in the 'Functions' folder
-            if isEnoughDataBuffered(properties.FIFOBuffer(:, 1), str2double(handles.delaySamples.String))
+            if isEnoughDataBuffered(FIFOBuffer(:, 1), str2double(handles.delaySamples.String))
                 % Depending if user wants to employ a software
                 % trigger or not, change state
                 properties.currentState = 'Capture.CapturingData';
@@ -225,11 +229,11 @@ function scansAvailable_Callback(handles, src, ~)
             end
         case 'Capture.CapturingData'
             % Get index for where data block starts
-            dataBlockStartIndex = find(properties.FIFOBuffer(:, 1) >= properties.captureStartMoment, 1, 'first');
-            dataBlockLength = size(properties.FIFOBuffer, 1) - dataBlockStartIndex;
+            dataBlockStartIndex = find(FIFOBuffer(:, 1) >= properties.captureStartMoment, 1, 'first');
+            dataBlockLength = size(FIFOBuffer, 1) - dataBlockStartIndex;
             % Only show available data, up to the maximum window, and only show data from the current data block
-            samplesToPlot = min([round(str2double(handles.viewWindowLength.String) * src.Rate), size(properties.FIFOBuffer,1), dataBlockLength]);
-            firstPoint = size(properties.FIFOBuffer, 1) - samplesToPlot + 1;
+            samplesToPlot = min([round(str2double(handles.viewWindowLength.String) * src.Rate), size(FIFOBuffer,1), dataBlockLength]);
+            firstPoint = size(FIFOBuffer, 1) - samplesToPlot + 1;
 
             % Get a value to downsample to a desired number for optimising plotting
             downsampleFrequency = 100;
@@ -237,29 +241,29 @@ function scansAvailable_Callback(handles, src, ~)
 
             % Plot the trigger data if the user has selected the relevant checkbox
             if handles.showTrigger.Value
-                plot(handles.triggerPlot, downsample(properties.FIFOBuffer(firstPoint:end, 1), dsVal), ...
-                     downsample(properties.FIFOBuffer(firstPoint:end, 2), dsVal));
+                plot(handles.triggerPlot, downsample(FIFOBuffer(firstPoint:end, 1), dsVal), ...
+                     downsample(FIFOBuffer(firstPoint:end, 2), dsVal));
             end
             % Always plot the recorded data when collecting data 
-            plot(handles.dataPlot, downsample(properties.FIFOBuffer(firstPoint:end, 1), dsVal), ...
-                 downsample(properties.FIFOBuffer(firstPoint:end, 3), dsVal));
+            plot(handles.dataPlot, downsample(FIFOBuffer(firstPoint:end, 1), dsVal), ...
+                 downsample(FIFOBuffer(firstPoint:end, 3), dsVal));
 
             % Wrap axis limits around the data
-            handles.triggerPlot.XLim = [properties.FIFOBuffer(firstPoint, 1), properties.FIFOBuffer(end, 1)];
-            handles.dataPlot.XLim = [properties.FIFOBuffer(firstPoint, 1), properties.FIFOBuffer(end, 1)];
+            handles.triggerPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(end, 1)];
+            handles.dataPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(end, 1)];
             %drawnow
             % First case: when triggers are used, check to save
             % data by either a timeout 
             if properties.useTrigger
-                timeoutResult = str2double((properties.FIFOBuffer(end,1)-properties.captureStartMoment)) > str2double(handles.timeoutSecs.String);
+                timeoutResult = str2double((FIFOBuffer(end,1)-properties.captureStartMoment)) > str2double(handles.timeoutSecs.String);
                 [endTriggerResult, properties] = detectEndTrigger(handles, properties);
                 if any(timeoutResult) || any(endTriggerResult)
-                    completeCapture(handles)
+                    properties = completeCapture(handles, properties);
                 end
             % Second case: no trigger is used, save the current
             % data as it is being recorded to prevent dropped data
             else
-                timeoutResult = properties.FIFOBuffer(end,1) - properties.lastSaveTime > str2double(handles.timeoutSecs.String) - 1;
+                timeoutResult = FIFOBuffer(end,1) - properties.lastSaveTime > str2double(handles.timeoutSecs.String) - 1;
                 if any(timeoutResult)
                     properties = completeCapture_noTrigg(handles, properties);
                 end
@@ -271,97 +275,101 @@ function scansAvailable_Callback(handles, src, ~)
 function [trigActive, properties] = detectStartTrigger(handles, properties)
 %detectTrigger Detects trigger condition and updates relevant app properties
 % Updates TrigActive, TrigMoment, and CaptureStartMoment app properties
+global FIFOBuffer
     freq       = str2double(handles.sampleFrequency.String);
     updateFreq = str2double(handles.updateFrequency.String);
     scansAvailable = freq * (updateFreq / 1000);
     % Get index to check only new data for trigger
-    index = size(properties.FIFOBuffer, 1) - scansAvailable + 1;
+    index = size(FIFOBuffer, 1) - scansAvailable + 1;
     
     trigConfig.Channel = 1; % Represents photo-diode channel
     trigConfig.Level = str2double(handles.startTrigValue.String);
     trigConfig.Condition = 'Rising';
     [trigActive, properties.captureStartMoment] = ...
-        trigDetect(properties.FIFOBuffer(index: end, 1), properties.FIFOBuffer(index: end, 2), trigConfig);
+        trigDetect(FIFOBuffer(index: end, 1), FIFOBuffer(index: end, 2), trigConfig);
 
 function [result, properties] = detectEndTrigger(handles, properties)
 % detectTrigger Detects trigger condition and updates relevant app properties
 % Updates TrigActive, TrigMoment, and CaptureStartMoment app properties
+    global FIFOBuffer
     freq            = str2double(handles.sampleFrequency.String);
     updateFreq      = str2double(handles.updateFrequency.String);
     scansAvailable = freq * (updateFreq / 1000);
     % Get index to check only new data for trigger
-    index = size(properties.FIFOBuffer, 1) - scansAvailable + 1;
+    index = size(FIFOBuffer, 1) - scansAvailable + 1;
     
     trigConfig.Channel = 1; % Represents Stabby-stab channel
     trigConfig.Level = handles.stopTrigValue.String;
     trigConfig.Condition = 'Falling';
     [result, properties.captureEndMoment] = ...
-        trigDetect(properties.FIFOBuffer(index: end, 1), properties.FIFOBuffer(index: end, 2), trigConfig);
+        trigDetect(FIFOBuffer(index: end, 1), FIFOBuffer(index: end, 2), trigConfig);
 
-function completeCapture(~, ~, handles)
+function completeCapture(~, properties)
 % completeCapture Saves captured data to user folder and resets DAQ
 % device to wait for another trigger
     % Find index of first sample in data buffer to be captured
-    firstSampleIndex = find(handles.FIFOBuffer(:, 1) >= handles.captureStartMoment, 1, 'first');
+    global FIFOBuffer
+    firstSampleIndex = find(FIFOBuffer(:, 1) >= properties.captureStartMoment, 1, 'first');
     
     % Find index of last sample in data buffer that complete the capture
-    lastSampleIndex = find(handles.FIFOBuffer(:, 1) >= handles.captureEndMoment, 1, 'first'); 
+    lastSampleIndex = find(FIFOBuffer(:, 1) >= properties.captureEndMoment, 1, 'first'); 
 
-    if isempty(firstSampleIndex) || isempty(lastSampleIndex) || lastSampleIndex > size(handles.FIFOBuffer(:, 1), 1)
+    if isempty(firstSampleIndex) || isempty(lastSampleIndex) || lastSampleIndex > size(FIFOBuffer(:, 1), 1)
         % If the index's either don't exist or go outside the
         % expected range of the captured data, abort.
         % Fill this with more sampsamp related warnings
         uialert(fig, 'Could not complete capture.', 'Capture error');
         return
     end
-
+    % THIS ENTIRE SECTION NEEDS UPDATING FOR THURSDAY
     % Set dynamic variable names based on current block
-    dataBlockName = strcat("Data_Block_", num2str(handles.counter));
-    timeBlockName = strcat("Ticktime_Block_", num2str(handles.counter));
+    dataBlockName = strcat("Data_Block_", num2str(properties.counter));
+    timeBlockName = strcat("Ticktime_Block_", num2str(properties.counter));
     
     % Extract capture data and shift timestamps so that 0 corresponds to the trigger moment
     % Save these to Data_Block_n and Ticktime_Block_n, respectively 
-    captureDataCmd = strcat(dataBlockName, "= [handles.dataFIFOBuffer(firstSampleIndex:lastSampleIndex), " + ...
-        "handles.triggerPlotFIFOBuffer(firstSampleIndex:lastSampleIndex)];");
+    captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(firstSampleIndex:lastSampleIndex, 3), " + ...
+        "FIFOBuffer(firstSampleIndex:lastSampleIndex, 2)];");
     ticktimeCmd = strcat(timeBlockName, "= convertTo(datetime('now'),'epochtime','Epoch','1970-01-01');");
     % Run these commands
     eval(captureDataCmd)
     eval(ticktimeCmd)
 
     % Create and run a save script using our dynamic variables
-    saveCmd = strcat("save(app.recordingName, '", dataBlockName, ...
+    saveCmd = strcat("save(properties.recordingName, '", dataBlockName, ...
         "', '", timeBlockName, "', '-append');");
     eval(saveCmd)
 
     %---Save the handle structure-----
-    handles.counter = handles.counter + 1;
+    properties.counter = properties.counter + 1;
     %---------------------------------
 
     %---start the daq-object again-----
     try
         % start(app.DAQ, 'Continuous')
-        handles.currentState = 'Capture.LookingForTrigger';
+        properties.currentState = 'Capture.LookingForTrigger';
     catch
         disp 'Timed out';
     end
 
-function properties = completeCapture_noTrigg(handles, properties)
+function properties = completeCapture_noTrigg(~, properties)
 % completeCapture Saves captured data to user folder for when no
 % trigger is used, ends recording session.
     
+    global FIFOBuffer
     % Set dynamic variable names based on current block
     dataBlockName = strcat("Data_Block_", num2str(properties.counter));
     timeBlockName = strcat("Ticktime_Block_", num2str(properties.counter));
 
     % Find the last time data was autosaved and grab its index
-    saveConditionMet = properties.FIFOBuffer(:, 1) >= properties.lastSaveTime;
+    saveConditionMet = FIFOBuffer(:, 1) >= properties.lastSaveTime;
     saveIndex = 1 + find(saveConditionMet==1, 1, 'first'); %#ok<NASGU> This is fine as it is used in an eval() command
-    properties.lastSaveTime = properties.FIFOBuffer(end, 1);
+    properties.lastSaveTime = FIFOBuffer(end, 1);
     
     % Extract capture data and shift timestamps so that 0 corresponds to the trigger moment
     % Save these to Data_Block_n and Ticktime_Block_n, respectively 
-    captureDataCmd = strcat(dataBlockName, "= [properties.FIFOBuffer(saveIndex:end, 3), " + ...
-        "properties.FIFOBuffer(saveIndex:end, 2)];");
+    captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(saveIndex:end, 3), " + ...
+        "FIFOBuffer(saveIndex:end, 2), FIFOBuffer(saveIndex:end, 1)];");
     ticktimeCmd = strcat(timeBlockName, "= convertTo(datetime('now'),'epochtime','Epoch','1970-01-01');");
     % Run these commands
     eval(captureDataCmd)
@@ -500,12 +508,3 @@ function timeoutSecs_Callback(~, ~, handles)
 function sampsampGUI_OutputFcn(~, ~, ~)
 % Get default command line output from handles structure
 % varargout{1} = handles.output;
-
-
-% --- Executes on button press in showTrigger.
-function showTrigger_Callback(hObject, eventdata, handles)
-% hObject    handle to showTrigger (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of showTrigger
