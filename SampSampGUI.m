@@ -22,7 +22,7 @@ function varargout = SampSampGUI(varargin)
 
 % Edit the above text to modify the response to help sampsamp
 
-% Last Modified by GUIDE v2.5 03-Oct-2024 15:50:54
+% Last Modified by GUIDE v2.5 17-Oct-2024 11:46:57
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -49,7 +49,7 @@ function sampsampGUI_OpeningFcn(hObject, ~, handles, ~)
 % handles    structure with handles and user data (see GUIDATA)
 
 %% Define our figure variables here
-% Information about the connected DAQ device
+% Information about the connected DAQ vendorid
 properties.daqConnection = "Dev1"; % Refers to what NI device is being used
 properties.daqType = "ni"; % Name of daqDevice
 properties.DAQ = [];% Handle to connected DAQ hardware object
@@ -66,7 +66,7 @@ properties.trigEnd = []; % Index pointer to the end of a data block
 
 properties.aboveUnder = []; % Change to something else, confusing
 
-% State of the DAQ device during data acquisition
+% State of the DAQ vendorid during data acquisition
 properties.currentState = 'Acquisition.ReadyForCapture';
 
 % Path and name to the .mat file representing the current recording
@@ -109,6 +109,15 @@ defaultPath = which("SampSampGUI");
 defaultPath = strsplit(defaultPath, 'SampSampGUI');
 
 handles.saveDir.String = defaultPath{1};
+
+% Find the currently connected DAQ vendor types
+vendors = daqvendorlist;
+vendors = {vendors.ID};
+handles.vendorID.String = vendors;
+
+device = daqlist(vendors{1});
+device = {device.DeviceID};
+handles.deviceID.String = device;
 
 properties.analogueInputChoice = [handles.a0.Value, handles.a1.Value, ...
                                handles.a2.Value, handles.a3.Value, ...
@@ -163,7 +172,7 @@ properties = configureDAQ(handles, properties);
 % Set counter for datablock
 properties.counter = 1;
 
-% Start DAQ device, quit if errors occcur
+% Start DAQ vendorid, quit if errors occcur
 try
     start(properties.DAQ,'continuous');
     tic
@@ -188,7 +197,6 @@ function scansAvailable_Callback(handles, src, ~)
 % This callback function gets executed periodically as more data is acquired by the daqDevice.
 % This callback is setup in the script 'configureDAQ.m' 
     global FIFOBuffer
-    tic
     properties = getappdata(0, 'properties');
     
     % Continuous acquisition data and timestamps are stored in FIFO data buffers
@@ -269,7 +277,6 @@ function scansAvailable_Callback(handles, src, ~)
                 end
             end
     end
-    toc
     setappdata(0, 'properties', properties);
 
 function [trigActive, properties] = detectStartTrigger(handles, properties)
@@ -306,7 +313,7 @@ function [result, properties] = detectEndTrigger(handles, properties)
 
 function completeCapture(~, properties)
 % completeCapture Saves captured data to user folder and resets DAQ
-% device to wait for another trigger
+% vendorid to wait for another trigger
     % Find index of first sample in data buffer to be captured
     global FIFOBuffer
     firstSampleIndex = find(FIFOBuffer(:, 1) >= properties.captureStartMoment, 1, 'first');
@@ -387,7 +394,7 @@ function properties = completeCapture_noTrigg(~, properties)
 function properties = configureDAQ(handles, properties)
     % Obtain variables from app properties
     ai              = properties.analogueInputChoice;
-    d               = daq(properties.daqType);
+    d               = daq(handles.vendorID.String{handles.vendorID.Value});
     freq            = str2double(handles.sampleFrequency.String);
     updateFreq      = str2double(handles.updateFrequency.String);
     
@@ -398,7 +405,7 @@ function properties = configureDAQ(handles, properties)
     for i=0:7
         if ai(i+1) == 1
             % If selected, add a channel to be recorded to DAQ object
-            addinput(d, properties.daqConnection, i, "Voltage");
+            addinput(d, handles.deviceID.String{handles.deviceID.Value}, i, "Voltage");
         end
     end
     
@@ -508,3 +515,12 @@ function timeoutSecs_Callback(~, ~, handles)
 function sampsampGUI_OutputFcn(~, ~, ~)
 % Get default command line output from handles structure
 % varargout{1} = handles.output;
+
+
+% --- Executes on selection change in vendorID.
+function vendorChanged_Callback(~, ~, handles)
+
+currentVendor = handles.vendorID.String{handles.vendorID.Value};
+vendorDevices = daqlist(currentVendor);
+vendorDevices = {vendorDevices.DeviceID};
+handles.deviceID.String = vendorDevices;
