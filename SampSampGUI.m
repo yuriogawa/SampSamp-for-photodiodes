@@ -221,12 +221,12 @@ function scansAvailable_Callback(handles, src, ~)
             if isEnoughDataBuffered(FIFOBuffer(:, 1), str2double(handles.delaySamples.String))
                 % Depending if user wants to employ a software
                 % trigger or not, change state
-                properties.currentState = 'Capture.CapturingData';
                 if properties.useTrigger
                     properties.currentState = 'Capture.LookingForTrigger';
                 else
                     properties.captureStartMoment = properties.lastSaveTime;
                     properties.currentState = 'Capture.CapturingData';
+                    properties.captureStart = convertTo(datetime('now'),'epochtime','Epoch','1970-01-01');
                 end
             end
         case 'Capture.LookingForTrigger'
@@ -234,6 +234,7 @@ function scansAvailable_Callback(handles, src, ~)
             [trigActive, properties] = detectStartTrigger(handles, properties);
             if trigActive
                 properties.currentState = 'Capture.CapturingData';
+                properties.captureStart = convertTo(datetime('now'),'epochtime','Epoch','1970-01-01');
             end
         case 'Capture.CapturingData'
             % Get index for where data block starts
@@ -337,7 +338,7 @@ function completeCapture(~, properties)
     % Save these to Data_Block_n and Ticktime_Block_n, respectively 
     captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(firstSampleIndex:lastSampleIndex, 3), " + ...
         "FIFOBuffer(firstSampleIndex:lastSampleIndex, 2)];");
-    ticktimeCmd = strcat(timeBlockName, "= convertTo(datetime('now'),'epochtime','Epoch','1970-01-01');");
+    ticktimeCmd = strcat(timeBlockName, "= properties.captureStart;");
     % Run these commands
     eval(captureDataCmd)
     eval(ticktimeCmd)
@@ -377,7 +378,7 @@ function properties = completeCapture_noTrigg(~, properties)
     % Save these to Data_Block_n and Ticktime_Block_n, respectively 
     captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(saveIndex:end, 3), " + ...
         "FIFOBuffer(saveIndex:end, 2), FIFOBuffer(saveIndex:end, 1)];");
-    ticktimeCmd = strcat(timeBlockName, "= convertTo(datetime('now'),'epochtime','Epoch','1970-01-01');");
+    ticktimeCmd = strcat(timeBlockName, "= properties.captureStart;");
     % Run these commands
     eval(captureDataCmd)
     eval(ticktimeCmd)
