@@ -258,8 +258,8 @@ function scansAvailable_Callback(handles, src, ~)
                  downsample(FIFOBuffer(firstPoint:end, 3), dsVal));
 
             % Wrap axis limits around the data
-            handles.triggerPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(end, 1)];
-            handles.dataPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(end, 1)];
+            handles.triggerPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String)];
+            handles.dataPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String)];
             %drawnow
             % First case: when triggers are used, check to save
             % data by either a timeout 
@@ -283,7 +283,7 @@ function scansAvailable_Callback(handles, src, ~)
 function [trigActive, properties] = detectStartTrigger(handles, properties)
 %detectTrigger Detects trigger condition and updates relevant app properties
 % Updates TrigActive, TrigMoment, and CaptureStartMoment app properties
-global FIFOBuffer
+    global FIFOBuffer
     freq       = str2double(handles.sampleFrequency.String);
     updateFreq = str2double(handles.updateFrequency.String);
     scansAvailable = freq * (updateFreq / 1000);
@@ -307,12 +307,12 @@ function [result, properties] = detectEndTrigger(handles, properties)
     index = size(FIFOBuffer, 1) - scansAvailable + 1;
     
     trigConfig.Channel = 1; % Represents Stabby-stab channel
-    trigConfig.Level = handles.stopTrigValue.String;
+    trigConfig.Level = str2double(handles.stopTrigValue.String);
     trigConfig.Condition = 'Falling';
     [result, properties.captureEndMoment] = ...
         trigDetect(FIFOBuffer(index: end, 1), FIFOBuffer(index: end, 2), trigConfig);
 
-function completeCapture(~, properties)
+function properties = completeCapture(~, properties)
 % completeCapture Saves captured data to user folder and resets DAQ
 % vendorid to wait for another trigger
     % Find index of first sample in data buffer to be captured

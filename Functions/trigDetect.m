@@ -14,10 +14,10 @@ function [trigDetected, trigMoment] = trigDetect(timestamps, data, trigConfig)
             switch trigConfig.Condition
                 case 'Rising'
                     % Logical array condition for signal trigger level
-                    trigConditionMet = data(:, trigConfig.Channel) > str2double(trigConfig.Level);
+                    trigConditionMet = data(:, trigConfig.Channel) > trigConfig.Level;
                 case 'Falling'
                     % Logical array condition for signal trigger level
-                    trigConditionMet = data(:, trigConfig.Channel) < str2double(trigConfig.Level);
+                    trigConditionMet = data(:, trigConfig.Channel) < trigConfig.Level;
             end
             
             trigDetected = any(trigConditionMet);
