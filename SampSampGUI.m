@@ -149,7 +149,7 @@ function startDAQ_Callback(~, ~, handles)
     % Reset Data and Timestamps
     properties.lastSaveTime = 0;
     
-    recordStart = string (datetime("now",  'Format', 'y-MM-d@HH_mm_ss'));
+    recordStart = string (datetime("now",  'Format', 'dd-MMM-y HH_mm_ss'));
     recordStart = strrep(recordStart, ":", "_");
     properties.currentRecordingFolder = string(handles.saveDir.String);
     
