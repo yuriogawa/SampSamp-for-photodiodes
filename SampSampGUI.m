@@ -149,11 +149,13 @@ function startDAQ_Callback(~, ~, handles)
     % Reset Data and Timestamps
     properties.lastSaveTime = 0;
     
-    recordStart = string (datetime("now",  'Format', 'dd-MMM-y HH_mm_ss'));
+    recordStart = string (datetime("now"));
     recordStart = strrep(recordStart, ":", "_");
-    properties.currentRecordingFolder = string(handles.saveDir.String);
+    newFolder = append(string(handles.saveDir.String), "\", recordStart);
+    properties.currentRecordingFolder = newFolder;
+    mkdir(newFolder);
     
-    properties.recordingName = append(properties.currentRecordingFolder, '\', recordStart, '.mat');
+    properties.recordingName = append(newFolder, '\', recordStart, '.mat');
     
     info = '---------Data from sampsamp 2.1 --------------';
     save(properties.recordingName,'info');
@@ -243,37 +245,22 @@ function scansAvailable_Callback(handles, src, ~)
             samplesToPlot = min([round(str2double(handles.viewWindowLength.String) * src.Rate), size(FIFOBuffer,1), dataBlockLength]);
             firstPoint = size(FIFOBuffer, 1) - samplesToPlot + 1;
     
-             % Get a value to downsample to a desired number for optimising plotting
+            % Get a value to downsample to a desired number for optimising plotting
             downsampleFrequency = 100;
             dsVal = floor(src.Rate / downsampleFrequency);
     
             % Plot the trigger data if the user has selected the relevant checkbox
-            if handles.showTrigger.Value && properties.useTrigger % If trigger is used make sure it starts at 1 sec!
-                plot(handles.triggerPlot, downsample(FIFOBuffer(firstPoint:end, 1) - properties.captureStartMoment, dsVal), ...
-                    downsample(FIFOBuffer(firstPoint:end, 2), dsVal));
-            elseif handles.showTrigger.Value % Otherwise plot the whole shebang
+            if handles.showTrigger.Value
                 plot(handles.triggerPlot, downsample(FIFOBuffer(firstPoint:end, 1), dsVal), ...
-                    downsample(FIFOBuffer(firstPoint:end, 2) - properties.captureStartMoment, dsVal));
+                    downsample(FIFOBuffer(firstPoint:end, 2), dsVal));
             end
-
             % Always plot the recorded data when collecting data
-            if properties.useTrigger % If trigger is used make sure it starts at 1 sec!
-                plot(handles.dataPlot, downsample(FIFOBuffer(firstPoint:end, 1) - properties.captureStartMoment, dsVal), ...
-                    downsample(FIFOBuffer(firstPoint:end, 3), dsVal));
-            else % Otherwise put in context of whole recording time
-                plot(handles.dataPlot, downsample(FIFOBuffer(firstPoint:end, 1), dsVal), ...
-                    downsample(FIFOBuffer(firstPoint:end, 3), dsVal));
-            end
+            plot(handles.dataPlot, downsample(FIFOBuffer(firstPoint:end, 1), dsVal), ...
+                downsample(FIFOBuffer(firstPoint:end, 3), dsVal));
     
             % Wrap axis limits around the data
-            if properties.useTrigger % Depending on trig or not we have different axes limits!!
-                handles.triggerPlot.XLim = [FIFOBuffer(firstPoint, 1) - properties.captureStartMoment, FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String) - properties.captureStartMoment];
-                handles.dataPlot.XLim = [FIFOBuffer(firstPoint, 1) - properties.captureStartMoment, FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String)  - properties.captureStartMoment];
-            else
-                handles.triggerPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String)];
-                handles.dataPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String)];
-            end
-              
+            handles.triggerPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String)];
+            handles.dataPlot.XLim = [FIFOBuffer(firstPoint, 1), FIFOBuffer(firstPoint, 1) + str2double(handles.viewWindowLength.String)];
             %drawnow
             % First case: when triggers are used, check to save
             % data by either a timeout
@@ -328,7 +315,7 @@ function [result, properties] = detectEndTrigger(handles, properties)
 
 % completeCapture Saves captured data to user folder and resets DAQ
 % vendorid to wait for another trigger
-function properties = completeCapture(handles, properties)
+function properties = completeCapture(~, properties)
     % Find index of first sample in data buffer to be captured
     global FIFOBuffer
     firstSampleIndex = find(FIFOBuffer(:, 1) >= properties.captureStartMoment, 1, 'first');
@@ -350,13 +337,8 @@ function properties = completeCapture(handles, properties)
     
     % Extract capture data and shift timestamps so that 0 corresponds to the trigger moment
     % Save these to Data_Block_n and Ticktime_Block_n, respectively
-    if handles.saveTimeData.Value == 1
-        captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(firstSampleIndex:lastSampleIndex, 3), " + ...
-            "FIFOBuffer(firstSampleIndex:lastSampleIndex, 2), FIFOBuffer(firstSampleIndex:lastSampleIndex, 1) - properties.captureStartMoment];");
-    else
-        captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(firstSampleIndex:lastSampleIndex, 3), " + ...
-            "FIFOBuffer(firstSampleIndex:lastSampleIndex, 2)];");
-    end
+    captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(firstSampleIndex:lastSampleIndex, 3), " + ...
+        "FIFOBuffer(firstSampleIndex:lastSampleIndex, 2)];");
     % Update captureStart to the current time for this capture block
     properties.captureStart = convertTo(datetime('now'),'epochtime','Epoch','1970-01-01');
     setappdata(0, 'properties', properties);  % Update the shared properties
@@ -385,7 +367,7 @@ function properties = completeCapture(handles, properties)
     
 % completeCapture Saves captured data to user folder for when no
 % trigger is used, ends recording session.
-function properties = completeCapture_noTrigg(handles, properties)
+function properties = completeCapture_noTrigg(~, properties)
     global FIFOBuffer
     % Set dynamic variable names based on current block
     dataBlockName = strcat("Data_Block_", num2str(properties.counter));
@@ -402,13 +384,8 @@ function properties = completeCapture_noTrigg(handles, properties)
     
     % Extract capture data and shift timestamps so that 0 corresponds to the trigger moment
     % Save these to Data_Block_n and Ticktime_Block_n, respectively
-    if handles.saveTimeData.Value == 1
-        captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(saveIndex:end, 3), " + ...
-            "FIFOBuffer(saveIndex:end, 2), FIFOBuffer(saveIndex:end, 1)];");
-    else
-        captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(saveIndex:end, 3), " + ...
-            "FIFOBuffer(saveIndex:end, 2)];");
-    end
+    captureDataCmd = strcat(dataBlockName, "= [FIFOBuffer(saveIndex:end, 3), " + ...
+        "FIFOBuffer(saveIndex:end, 2), FIFOBuffer(saveIndex:end, 1)];");
     ticktimeCmd = strcat(timeBlockName, "= properties.captureStart;");
     % Run these commands
     eval(captureDataCmd)
@@ -425,6 +402,10 @@ function properties = completeCapture_noTrigg(handles, properties)
 
 % Obtain variables from app properties
 function properties = configureDAQ(handles, properties)
+    properties.analogueInputChoice = [handles.a0.Value, handles.a1.Value, ...
+                                      handles.a2.Value, handles.a3.Value, ...
+                                      handles.a4.Value, handles.a5.Value, ...
+                                      handles.a6.Value, handles.a7.Value];
     ai              = properties.analogueInputChoice;
     d               = daq(handles.vendorID.String{handles.vendorID.Value});
     freq            = str2double(handles.sampleFrequency.String);
@@ -554,12 +535,3 @@ function figure1_SizeChangedFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
-% --- Executes on button press in saveTimeData.
-function saveTimeData_Callback(hObject, eventdata, handles)
-% hObject    handle to saveTimeData (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of saveTimeData
